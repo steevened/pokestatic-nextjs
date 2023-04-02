@@ -1,18 +1,18 @@
-import { ReactElement, useEffect, useState } from 'react';
+import { pokeApi } from '@/api';
+import { Pokemon, PokemonListResponse } from '@/interfaces';
 import { GetStaticPaths, GetStaticProps } from 'next';
+import { ReactElement, useState } from 'react';
+import { localFavorites } from '@/utils';
+import { Grid, Card, Button, Container, Text, Image } from '@nextui-org/react';
+import confetti from 'canvas-confetti';
 import { NextPageWithLayout } from '../_app';
 import Layout from '@/components/layouts/Layout';
-import { pokeApi } from '@/api';
-import { Pokemon } from '@/interfaces';
-import { Button, Card, Container, Grid, Image, Text } from '@nextui-org/react';
-import { localFavorites } from '@/utils';
-import confetti from 'canvas-confetti';
 
 interface Props {
   pokemon: Pokemon;
 }
 
-const PokemonPage: NextPageWithLayout<Props> = ({ pokemon }) => {
+const PokemonByNamePage: NextPageWithLayout<Props> = ({ pokemon }) => {
   const [isInFavorites, setIsInFavorites] = useState(
     localFavorites.isOnFavorites(pokemon.id)
   );
@@ -101,31 +101,31 @@ const PokemonPage: NextPageWithLayout<Props> = ({ pokemon }) => {
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const allPokemons = [...Array(151)].map((value, index) => `${index + 1}`);
+  const { data: pokemons } = await pokeApi.get<PokemonListResponse>(
+    '/pokemon?limit=151'
+  );
 
   return {
-    paths: allPokemons.map((id) => ({
-      params: { id },
+    paths: pokemons.results.map((pokemon) => ({
+      params: { name: pokemon.name },
     })),
     fallback: false,
   };
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const { id } = params as { id: string };
+  const { name } = params as { name: string };
+  const { data: pokemon } = await pokeApi.get<Pokemon>(`/pokemon/${name}`);
 
-  const { data: pokemon } = await pokeApi.get<Pokemon>(`/pokemon/${id}`);
+  // console.log(pokemons);
 
   return {
-    props: {
-      pokemon,
-    },
+    props: { pokemon },
   };
 };
 
-PokemonPage.getLayout = (page: ReactElement) => {
-  const name = page.props.pokemon.name;
-  return <Layout title={'Pokemon App - ' + name}>{page}</Layout>;
+PokemonByNamePage.getLayout = (page: ReactElement) => {
+  return <Layout>{page}</Layout>;
 };
 
-export default PokemonPage;
+export default PokemonByNamePage;
